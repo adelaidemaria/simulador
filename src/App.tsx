@@ -187,9 +187,20 @@ const WALLPAPERS = [
 // --- Main Component ---
 
 export default function App() {
-  // State
-  const [items, setItems] = useState<DesktopItem[]>(DEFAULT_ITEMS);
-  const [deletedItems, setDeletedItems] = useState<DesktopItem[]>([]);
+  // Persistence Helpers
+  const SAVE_KEY = 'simulador_informatica_v1';
+
+  // State initialization with Persistence
+  const [items, setItems] = useState<DesktopItem[]>(() => {
+    const saved = localStorage.getItem(`${SAVE_KEY}_items`);
+    return saved ? JSON.parse(saved) : DEFAULT_ITEMS;
+  });
+
+  const [deletedItems, setDeletedItems] = useState<DesktopItem[]>(() => {
+    const saved = localStorage.getItem(`${SAVE_KEY}_deleted`);
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const [windows, setWindows] = useState<WindowState[]>([]);
   const [activeWindowId, setActiveWindowId] = useState<string | null>(null);
   const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null);
@@ -213,22 +224,36 @@ export default function App() {
   const [fontSize, setFontSize] = useState(1);
   const [isHighContrast, setIsHighContrast] = useState(false);
   const [lessonSuccess, setLessonSuccess] = useState(false);
-  const [totalScore, setTotalScore] = useState(0);
+  
+  const [totalScore, setTotalScore] = useState<number>(() => {
+    const saved = localStorage.getItem(`${SAVE_KEY}_score`);
+    return saved ? parseInt(saved) : 0;
+  });
+
   const [lastPoints, setLastPoints] = useState(0);
   const [maxZIndex, setMaxZIndex] = useState(10);
   const [settingsTab, setSettingsTab] = useState<'personalization' | 'accessibility'>('personalization');
   
   // New System States
   const [systemStatus, setSystemStatus] = useState<'desktop' | 'login' | 'restarting' | 'starting'>('desktop');
-  const [userName, setUserName] = useState('usuário');
+  
+  const [userName, setUserName] = useState<string>(() => {
+    const saved = localStorage.getItem(`${SAVE_KEY}_user`);
+    return saved || 'usuário';
+  });
+
   const [showPowerOptions, setShowPowerOptions] = useState(false);
   
   // Gmail State
-  const [emails, setEmails] = useState<Email[]>([
-    { id: '1', sender: 'Google', subject: 'Bem-vindo ao seu novo Gmail', body: 'Olá! Estamos felizes por você ter escolhido o Gmail para as suas comunicações.', date: '14:20', folder: 'inbox' },
-    { id: '2', sender: 'Suporte Técnico', subject: 'Dicas de Segurança', body: 'Nunca compartilhe sua senha com ninguém por e-mail. Fique atento a links suspeitos.', date: 'Ontem', folder: 'inbox' },
-    { id: '3', sender: 'Banco Falso', subject: 'URGENTE: Boleto em atraso', body: 'Clique aqui para baixar seu boleto e evitar multas por atraso no pagamento.', date: '10 Mar', folder: 'inbox', isSpecial: true },
-  ]);
+  const [emails, setEmails] = useState<Email[]>(() => {
+    const saved = localStorage.getItem(`${SAVE_KEY}_emails`);
+    return saved ? JSON.parse(saved) : [
+      { id: '1', sender: 'Google', subject: 'Bem-vindo ao seu novo Gmail', body: 'Olá! Estamos felizes por você ter escolhido o Gmail para as suas comunicações.', date: '14:20', folder: 'inbox' },
+      { id: '2', sender: 'Suporte Técnico', subject: 'Dicas de Segurança', body: 'Nunca compartilhe sua senha com ninguém por e-mail. Fique atento a links suspeitos.', date: 'Ontem', folder: 'inbox' },
+      { id: '3', sender: 'Banco Falso', subject: 'URGENTE: Boleto em atraso', body: 'Clique aqui para baixar seu boleto e evitar multas por atraso no pagamento.', date: '10 Mar', folder: 'inbox', isSpecial: true },
+    ];
+  });
+
   const [gmailActiveFolder, setGmailActiveFolder] = useState<'inbox' | 'sent' | 'trash'>('inbox');
   const [isComposingEmail, setIsComposingEmail] = useState(false);
   const [emailTo, setEmailTo] = useState('');
@@ -243,6 +268,27 @@ export default function App() {
 
   const desktopRef = useRef<HTMLDivElement>(null);
   const trashRef = useRef<HTMLDivElement>(null);
+
+  // Persistence Effects
+  useEffect(() => {
+    localStorage.setItem(`${SAVE_KEY}_items`, JSON.stringify(items));
+  }, [items]);
+
+  useEffect(() => {
+    localStorage.setItem(`${SAVE_KEY}_deleted`, JSON.stringify(deletedItems));
+  }, [deletedItems]);
+
+  useEffect(() => {
+    localStorage.setItem(`${SAVE_KEY}_emails`, JSON.stringify(emails));
+  }, [emails]);
+
+  useEffect(() => {
+    localStorage.setItem(`${SAVE_KEY}_score`, totalScore.toString());
+  }, [totalScore]);
+
+  useEffect(() => {
+    localStorage.setItem(`${SAVE_KEY}_user`, userName);
+  }, [userName]);
 
   // --- Helpers ---
 
