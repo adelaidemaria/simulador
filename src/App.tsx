@@ -43,17 +43,20 @@ import {
   Star,
   Copy,
   Clipboard,
-  ArrowRight
+  ArrowRight,
+  Mouse
 } from 'lucide-react';
 
 import WindowsExplorerMock from './components/WindowsExplorerMock';
 import WordSimulator from './components/WordSimulator';
 import ExcelSimulator from './components/ExcelSimulator';
+import MouseSimulator from './components/MouseSimulator';
+
 
 // --- Types ---
 
-type ItemType = 'folder' | 'word' | 'excel' | 'photo' | 'virus' | 'lessons' | 'explorer_shortcut' | 'txt' | 'png' | 'jpg' | 'chrome' | 'gmail';
-type AppType = 'explorer' | 'chrome' | 'gmail' | 'trash' | 'settings' | 'virus_warning' | 'typing' | 'windows_explorer' | 'photo_viewer' | 'word_simulator' | 'excel_simulator';
+type ItemType = 'folder' | 'word' | 'excel' | 'photo' | 'virus' | 'lessons' | 'explorer_shortcut' | 'txt' | 'png' | 'jpg' | 'chrome' | 'gmail' | 'mouse_training';
+type AppType = 'explorer' | 'chrome' | 'gmail' | 'trash' | 'settings' | 'virus_warning' | 'typing' | 'windows_explorer' | 'photo_viewer' | 'word_simulator' | 'excel_simulator' | 'mouse_simulator';
 
 interface DesktopItem {
   id: string;
@@ -154,6 +157,7 @@ const DEFAULT_ITEMS: DesktopItem[] = [
   { id: '6', name: 'Windows Explorer', type: 'explorer_shortcut', x: 160, y: 270, parentId: null },
   { id: 'chrome-desktop', name: 'Google Chrome', type: 'chrome', x: 160, y: 160, parentId: null },
   { id: 'gmail-desktop', name: 'Gmail', type: 'gmail', x: 270, y: 50, parentId: null },
+  { id: 'mouse-training', name: 'Treino de Mouse', type: 'mouse_training', x: 270, y: 160, parentId: null },
 
   // Meus Documentos contents
   { id: 'md1', name: 'Relatório.doc', type: 'word', x: 0, y: 0, parentId: '1' },
@@ -334,7 +338,7 @@ export default function App() {
       type,
       title,
       isOpen: true,
-      isMaximized: false,
+      isMaximized: type === 'mouse_simulator',
       zIndex: maxZIndex + 1,
       folderId
     };
@@ -535,6 +539,8 @@ export default function App() {
       openWindow('chrome', 'Google Chrome');
     } else if (item.type === 'gmail') {
       openWindow('gmail', 'Gmail');
+    } else if (item.type === 'mouse_training') {
+      openWindow('mouse_simulator', 'Treinamento de Mouse');
     }
   };
 
@@ -588,6 +594,11 @@ export default function App() {
       case 'gmail': return (
         <div className="p-2 bg-white rounded-xl shadow-lg border border-red-100 flex items-center justify-center">
           <Mail size={size - 16} className="text-red-500" />
+        </div>
+      );
+      case 'mouse_training': return (
+        <div className="p-2 bg-blue-600 rounded-xl shadow-lg border border-blue-400 flex items-center justify-center">
+          <Mouse size={size - 16} className="text-white" />
         </div>
       );
     }
@@ -715,15 +726,16 @@ export default function App() {
       {windows.map((win) => (
         <motion.div
           key={win.id}
-          drag={win.type !== 'typing'}
+          drag={win.type !== 'typing' && win.type !== 'mouse_simulator' && !win.isMaximized}
           dragMomentum={false}
           dragElastic={0}
-          dragHandleClassName="window-header"
+          dragListener={win.type !== 'mouse_simulator' && !win.isMaximized}
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ duration: 0 }}
           style={{ zIndex: win.zIndex }}
           onClick={() => focusWindow(win.id)}
+          onContextMenu={(e) => { e.stopPropagation(); setContextMenu(null); }}
           className={`fixed bg-white rounded-lg shadow-2xl border border-gray-300 flex flex-col overflow-hidden ${
             win.isMaximized || win.type === 'typing' 
               ? 'inset-0 sm:inset-4 md:inset-8 !translate-x-0 !translate-y-0' 
@@ -742,6 +754,7 @@ export default function App() {
               {win.type === 'virus_warning' && <ShieldAlert size={18} className="text-red-600" />}
               {win.type === 'word_simulator' && <FileText size={18} className="text-blue-600" />}
               {win.type === 'excel_simulator' && <Table size={18} className="text-green-600" />}
+              {win.type === 'mouse_simulator' && <Mouse size={18} className="text-blue-600" />}
               <span>{win.title}</span>
             </div>
             <div className="flex items-center gap-1">
@@ -1446,6 +1459,10 @@ export default function App() {
             {win.type === 'excel_simulator' && (
               <ExcelSimulator fileName={win.title} />
             )}
+
+            {win.type === 'mouse_simulator' && (
+              <MouseSimulator onClose={() => closeWindow(win.id)} />
+            )}
           </div>
         </motion.div>
       ))}
@@ -1561,7 +1578,10 @@ export default function App() {
                   <div className="w-14 h-14 bg-yellow-500 rounded-2xl flex items-center justify-center shadow-lg"><Folder size={32} /></div>
                   <span className="text-xs font-medium">Arquivos</span>
                 </div>
-
+                <div onClick={() => { openWindow('mouse_simulator', 'Treinamento de Mouse'); setShowStartMenu(false); }} className="flex flex-col items-center gap-3 p-3 hover:bg-white/5 rounded-xl cursor-pointer transition-all hover:scale-105">
+                  <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg"><Mouse size={32} /></div>
+                  <span className="text-xs font-medium text-center">Treino de<br/>Mouse</span>
+                </div>
               </div>
             </div>
           </motion.div>
