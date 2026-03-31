@@ -79,6 +79,7 @@ interface WindowState {
   title: string;
   isOpen: boolean;
   isMaximized: boolean;
+  isMinimized: boolean;
   zIndex: number;
   folderId?: string | null; // For explorer
   quiz_stage?: number; 
@@ -228,6 +229,7 @@ export default function App() {
   } | null>(null);
   const [clipboardItem, setClipboardItem] = useState<DesktopItem | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [selectedIconId, setSelectedIconId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResult, setSearchResult] = useState<string | null>(null);
   const [isVirusActive, setIsVirusActive] = useState(false);
@@ -314,6 +316,44 @@ export default function App() {
     localStorage.setItem(`${SAVE_KEY}_user`, userName);
   }, [userName]);
 
+  // --- Attachments & Saving ---
+  const handleSaveFile = (name: string, type: ItemType, url?: string) => {
+    setItems(prev => {
+      const newItem: DesktopItem = {
+        id: Math.random().toString(36).substr(2, 9),
+        name: name,
+        type: type,
+        x: 300 + Math.random() * 100, // Spawn in a visible area
+        y: 200 + Math.random() * 100,
+        parentId: null, // Save to desktop for easy finding
+        url: url
+      };
+      
+      // Simple visual feedback
+      const notification = document.createElement('div');
+      notification.innerHTML = `
+        <div style="position:fixed; bottom:60px; right:20px; background:#25D366; color:white; padding:15px 25px; border-radius:12px; font-family:sans-serif; font-weight:bold; box-shadow:0 10px 25px rgba(0,0,0,0.2); z-index:9999; animation: slideIn 0.3s ease-out">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" style="width:20px; vertical-align:middle; margin-right:10px" />
+          Arquivo "${name}" salvo na Área de Trabalho!
+        </div>
+        <style>
+          @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        </style>
+      `;
+      document.body.appendChild(notification);
+      setTimeout(() => notification.remove(), 4000);
+
+      return [...prev, newItem];
+    });
+  };
+
+  useEffect(() => {
+    (window as any).onSaveToSimulator = (name: string, type: ItemType) => {
+      handleSaveFile(name, type);
+    };
+    return () => { delete (window as any).onSaveToSimulator; };
+  }, []);
+
   // --- Helpers ---
 
   const startSimulator = () => {
@@ -352,6 +392,8 @@ export default function App() {
     const existing = windows.find(w => w.type === type && w.folderId === folderId && w.quiz_stage === quiz_stage);
     if (existing) {
       setActiveWindowId(existing.id);
+      setWindows(windows.map(w => w.id === existing.id ? { ...w, isMinimized: false, zIndex: maxZIndex + 1 } : w));
+      setMaxZIndex(maxZIndex + 1);
       return;
     }
 
@@ -361,6 +403,7 @@ export default function App() {
       title,
       isOpen: true,
       isMaximized: type === 'mouse_simulator' || type === 'whatsapp',
+      isMinimized: false,
       zIndex: maxZIndex + 1,
       folderId,
       quiz_stage
@@ -377,7 +420,7 @@ export default function App() {
 
   const focusWindow = (id: string) => {
     setActiveWindowId(id);
-    setWindows(windows.map(w => w.id === id ? { ...w, zIndex: maxZIndex + 1 } : w));
+    setWindows(windows.map(w => w.id === id ? { ...w, zIndex: maxZIndex + 1, isMinimized: false } : w));
     setMaxZIndex(maxZIndex + 1);
   };
 
@@ -705,6 +748,12 @@ export default function App() {
         backgroundSize: 'cover',
         backgroundPosition: 'center'
       }}
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'F2' && selectedIconId && !editingId) {
+          setEditingId(selectedIconId);
+        }
+      }}
       onContextMenu={(e) => {
         e.preventDefault();
         setContextMenu({ visible: true, x: e.clientX, y: e.clientY, targetId: null, type: 'desktop' });
@@ -712,6 +761,7 @@ export default function App() {
       onClick={() => {
         setContextMenu(null);
         setShowStartMenu(false);
+        setSelectedIconId(null);
       }}
     >
       {/* Virus Overlay */}
@@ -736,9 +786,14 @@ export default function App() {
             dragElastic={0}
             onDragEnd={(_, info) => handleDragEnd(item.id, info)}
             onDoubleClick={() => handleItemClick(item)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedIconId(item.id);
+            }}
             onContextMenu={(e) => {
               e.preventDefault();
               e.stopPropagation();
+              setSelectedIconId(item.id);
               setContextMenu({ visible: true, x: e.clientX, y: e.clientY, targetId: item.id, type: 'item' });
             }}
             className="absolute flex flex-col items-center w-24 cursor-pointer group"
@@ -746,7 +801,7 @@ export default function App() {
             transition={{ duration: 0 }}
             whileHover={{ scale: 1.05 }}
           >
-            <div className={`p-2 rounded-lg group-hover:bg-white/10 transition-colors ${contextMenu?.targetId === item.id ? 'bg-white/20' : ''}`}>
+            <div className={`p-2 rounded-lg transition-colors ${selectedIconId === item.id || contextMenu?.targetId === item.id ? 'bg-white/20' : 'group-hover:bg-white/10'}`}>
               {renderIcon(item.type, 64, item)}
             </div>
             {editingId === item.id ? (
@@ -768,7 +823,15 @@ export default function App() {
                 onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
               />
             ) : (
-              <span className="text-white text-xs font-medium text-center mt-1 px-1 rounded bg-black/20 break-words w-full shadow-sm">
+              <span 
+                className={`text-white text-xs font-medium text-center mt-1 px-1 rounded break-words w-full shadow-sm transition-colors ${selectedIconId === item.id ? 'bg-blue-600' : 'bg-black/20'}`}
+                onClick={(e) => {
+                  if (selectedIconId === item.id) {
+                    e.stopPropagation();
+                    setEditingId(item.id);
+                  }
+                }}
+              >
                 {item.name}
               </span>
             )}
@@ -791,12 +854,17 @@ export default function App() {
       {windows.map((win) => (
         <motion.div
           key={win.id}
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ 
+            opacity: win.isMinimized ? 0 : 1, 
+            scale: win.isMinimized ? 0.8 : 1, 
+            y: win.isMinimized ? 100 : 0,
+            pointerEvents: win.isMinimized ? 'none' : 'auto'
+          }}
           drag={win.type !== 'typing' && win.type !== 'mouse_simulator' && !win.isMaximized}
           dragMomentum={false}
           dragElastic={0}
           dragListener={win.type !== 'mouse_simulator' && !win.isMaximized}
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ duration: 0 }}
           style={{ zIndex: win.zIndex }}
           onClick={() => focusWindow(win.id)}
@@ -824,11 +892,19 @@ export default function App() {
               <span>{win.title}</span>
             </div>
             <div className="flex items-center gap-1">
-              <button className="p-2 hover:bg-gray-200 rounded text-gray-500"><Minimize2 size={16} /></button>
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
-                  setWindows(windows.map(w => w.id === win.id ? { ...w, isMaximized: !w.isMaximized } : w));
+                  setWindows(windows.map(w => w.id === win.id ? { ...w, isMinimized: true } : w));
+                }}
+                className="p-2 hover:bg-gray-200 rounded text-gray-500"
+              >
+                <Minimize2 size={16} />
+              </button>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setWindows(windows.map(w => w.id === win.id ? { ...w, isMaximized: !w.isMaximized, isMinimized: false } : w));
                 }}
                 className="p-2 hover:bg-gray-200 rounded text-gray-500"
               >

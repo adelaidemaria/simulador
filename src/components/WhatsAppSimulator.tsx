@@ -15,7 +15,12 @@ import {
   Phone,
   Video,
   X,
-  Send
+  Send,
+  Save,
+  Download,
+  Settings as SettingsIcon,
+  Monitor as MonitorIcon,
+  Folder
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -107,7 +112,18 @@ export default function WhatsAppSimulator() {
   const [inputValue, setInputValue] = useState('');
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // --- Personalization State ---
+  const [userProfile, setUserProfile] = useState({
+    name: 'Seu Nome',
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop',
+    status: 'Disponível'
+  });
+  const [showProfileEdit, setShowProfileEdit] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const [showFolderSelect, setShowFolderSelect] = useState<{name: string, type: 'photo' | 'word'} | null>(null);
 
   const handleSelectContact = (id: string) => {
     setSelectedContactId(id);
@@ -115,7 +131,6 @@ export default function WhatsAppSimulator() {
   };
 
   const EMOJIS = ['😀', '😂', '😍', '👍', '🙏', '❤️', '✅', '🤔', '📁', '📄', '🤝', '🌞'];
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   const addEmoji = (emoji: string) => {
     setInputValue(prev => prev + emoji);
@@ -133,6 +148,7 @@ export default function WhatsAppSimulator() {
   const handleSendMessage = () => {
     if (!inputValue.trim() || !selectedContactId) return;
 
+    const contactMessages = messages[selectedContactId] || [];
     const newMessage: Message = {
       id: Math.random().toString(),
       senderId: 'me',
@@ -146,25 +162,73 @@ export default function WhatsAppSimulator() {
       ...prev,
       [selectedContactId]: [...(prev[selectedContactId] || []), newMessage]
     }));
+    
+    const sentText = inputValue;
     setInputValue('');
 
-    // Mock response for technical support
-    if (selectedContactId === '1') {
-      setTimeout(() => {
-        const response: Message = {
-          id: Math.random().toString(),
-          senderId: '1',
-          text: 'Recebemos sua mensagem. Um técnico será atribuído para te ajudar em breve.',
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          isMe: false,
-          status: 'read'
-        };
-        setMessages(prev => ({
-          ...prev,
-          [selectedContactId]: [...(prev[selectedContactId] || []), response]
-        }));
-      }, 2000);
-    }
+    // --- Intelligent Response Logic ---
+    setIsTyping(true);
+    
+    setTimeout(() => {
+      let responseText = "";
+      const lowerText = sentText.toLowerCase();
+
+      // Simple but "smart" contextual responses
+      if (selectedContactId === '1') { // Suporte
+        if (lowerText.includes('ajuda') || lowerText.includes('problema')) {
+          responseText = "Com certeza! Pode me detalhar o que está acontecendo? Se for um erro no sistema, tente reiniciar o simulador.";
+        } else if (lowerText.includes('obrigado') || lowerText.includes('vlw')) {
+          responseText = "Disponha! Estamos aqui para garantir que seu aprendizado seja o melhor possível. Mais alguma dúvida?";
+        } else {
+          responseText = "Entendi. Vou verificar aqui no sistema agora mesmo. Um momento...";
+        }
+      } else if (selectedContactId === '10') { // Nutricionista
+        if (lowerText.includes('dieta') || lowerText.includes('comer')) {
+          responseText = "Isso mesmo! Foque em proteínas magras e vegetais. Já conseguiu abrir o arquivo com o cardápio?";
+        } else if (lowerText.includes('claro') || lowerText.includes('sim')) {
+          responseText = "Ótimo! Qualquer dúvida sobre as substituições dos alimentos, é só me chamar. Bons treinos!";
+        } else {
+          responseText = "Legal! O importante é manter a constância. Como você está se sentindo hoje?";
+        }
+      } else if (selectedContactId === '5') { // Engenheiro
+        if (lowerText.includes('planta') || lowerText.includes('projeto')) {
+          responseText = "Sim, o projeto está na fase final. Você conseguiu baixar os arquivos que te enviei ontem?";
+        } else {
+          responseText = "Perfeito. Vou agendar uma reunião com a equipe para alinharmos os próximos passos.";
+        }
+      } else {
+        // Generic "Smart" fallback
+        const genericResponses = [
+          "Interessante! Vamos conversando sobre isso.",
+          "Certo, entendi o seu ponto. Como você prefere prosseguir?",
+          "Vou confirmar essa informação e já te dou um retorno, ok?",
+          "Faz todo sentido. Vou deixar anotado aqui."
+        ];
+        responseText = genericResponses[Math.floor(Math.random() * genericResponses.length)];
+      }
+
+      const response: Message = {
+        id: Math.random().toString(),
+        senderId: selectedContactId,
+        text: responseText,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        isMe: false,
+        status: 'read'
+      };
+
+      setMessages(prev => {
+        const currentMessages = prev[selectedContactId] || [];
+        // Add a "reading" delay
+        setTimeout(() => {
+          setMessages(p => ({
+            ...p,
+            [selectedContactId]: [...(p[selectedContactId] || []), response]
+          }));
+          setIsTyping(false);
+        }, 500);
+        return prev;
+      });
+    }, 2500 + Math.random() * 2000); 
   };
 
   const handleAttachFile = (type: 'image' | 'file') => {
@@ -204,10 +268,14 @@ export default function WhatsAppSimulator() {
       <div className="w-[30%] min-w-[300px] max-w-[420px] border-r border-[#d1d7db] flex flex-col bg-white">
         {/* Sidebar Header */}
         <div className="bg-[#f0f2f5] px-4 py-3 flex items-center justify-between shrink-0">
-          <div className="w-10 h-10 rounded-full overflow-hidden border border-gray-200">
-            <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop" className="w-full h-full object-cover" />
+          <div 
+            className="w-10 h-10 rounded-full overflow-hidden border border-gray-200 cursor-pointer hover:ring-2 ring-blue-500 transition-all"
+            onClick={() => setShowProfileEdit(true)}
+          >
+            <img src={userProfile.avatar} className="w-full h-full object-cover" />
           </div>
           <div className="flex gap-6 text-[#54656f]">
+             <motion.div whileHover={{ scale: 1.1 }} className="cursor-pointer" onClick={() => setShowProfileEdit(true)}><SettingsIcon size={20} /></motion.div>
              <motion.div whileHover={{ scale: 1.1 }} className="cursor-pointer"><MessageSquare size={20} /></motion.div>
              <motion.div whileHover={{ scale: 1.1 }} className="cursor-pointer"><MoreVertical size={20} /></motion.div>
           </div>
@@ -285,21 +353,27 @@ export default function WhatsAppSimulator() {
                 transition={{ duration: 0.2 }}
                 className={`flex ${msg.isMe ? 'justify-end' : 'justify-start'} mb-1`}
               >
-                <div className={`max-w-[65%] px-3 py-1.5 rounded-lg shadow-sm relative group ${msg.isMe ? 'bg-[#d9fdd3] rounded-tr-none' : 'bg-white rounded-tl-none'}`}>
+                <div className={`max-w-[75%] px-3 py-1.5 rounded-lg shadow-sm relative group ${msg.isMe ? 'bg-[#d9fdd3] rounded-tr-none' : 'bg-white rounded-tl-none'}`}>
                   {/* Tail for bubbles (simplified) */}
                   <div className={`absolute top-0 w-2 h-3.5 ${msg.isMe ? 'bg-[#d9fdd3] -right-1.5 clip-path-msg-me' : 'bg-white -left-1.5 clip-path-msg-other'}`}></div>
                   
                   {msg.attachment ? (
                     <div className="mb-2">
                        {msg.attachment.type === 'image' ? (
-                         <div className="flex flex-col gap-2">
-                           <div className="rounded overflow-hidden bg-gray-100 min-w-[200px] min-h-[150px] flex items-center justify-center">
+                         <div className="flex flex-col gap-2 relative group-attachment">
+                           <div className="rounded overflow-hidden bg-gray-100 min-w-[200px] min-h-[150px] flex items-center justify-center relative">
                               <ImageIcon size={48} className="text-gray-300" />
+                              <button 
+                                onClick={() => setShowFolderSelect({ name: msg.attachment?.name || 'imagem.jpg', type: 'photo' })}
+                                className="absolute top-2 right-2 p-2 bg-white/90 rounded-full text-blue-600 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 text-xs font-bold"
+                              >
+                                <Download size={16} /> Salvar no PC
+                              </button>
                            </div>
                            <p className="text-xs text-[#111b21] font-medium">{msg.attachment.name}</p>
                          </div>
                        ) : (
-                         <div className="flex items-center gap-4 bg-gray-50/50 p-3 rounded border border-gray-100">
+                         <div className="flex items-center gap-4 bg-gray-50/50 p-3 rounded border border-gray-100 relative group-attachment">
                             <div className="bg-[#5c68ff] p-2 rounded-lg text-white">
                                <FileText size={24} />
                             </div>
@@ -307,6 +381,13 @@ export default function WhatsAppSimulator() {
                                <h5 className="text-sm font-bold text-[#111b21] truncate">{msg.attachment.name}</h5>
                                <p className="text-[10px] text-gray-500">{msg.attachment.size}</p>
                             </div>
+                            <button 
+                              onClick={() => setShowFolderSelect({ name: msg.attachment?.name || 'documento.doc', type: 'word' })}
+                              className="p-2 bg-blue-600 rounded-full text-white shadow-lg hover:bg-blue-700 transition-all"
+                              title="Salvar no Computador"
+                            >
+                               <Download size={16} />
+                            </button>
                          </div>
                        )}
                     </div>
@@ -323,6 +404,20 @@ export default function WhatsAppSimulator() {
                 </div>
               </motion.div>
             ))}
+            
+            {isTyping && (
+              <motion.div 
+                initial={{ opacity: 0, x: -10 }} 
+                animate={{ opacity: 1, x: 0 }}
+                className="flex justify-start mb-2"
+              >
+                <div className="bg-white px-4 py-2 rounded-2xl rounded-tl-none shadow-sm flex gap-1 items-center">
+                  <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" />
+                  <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0.2s]" />
+                  <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0.4s]" />
+                </div>
+              </motion.div>
+            )}
             <div ref={messagesEndRef} />
           </div>
 
@@ -397,7 +492,7 @@ export default function WhatsAppSimulator() {
                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
                />
             </div>
-            <div className="text-[#54656f]">
+             <div className="text-[#54656f]">
                {inputValue.trim() ? (
                  <motion.button 
                    whileHover={{ scale: 1.1 }}
@@ -427,6 +522,132 @@ export default function WhatsAppSimulator() {
            </div>
         </div>
       )}
+
+      {/* Profile Edit Modal */}
+      <AnimatePresence>
+        {showProfileEdit && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+          >
+             <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              className="bg-white rounded-[2rem] w-full max-w-md shadow-2xl p-8 border-4 border-[#00a884]"
+             >
+                <div className="flex justify-between items-center mb-8">
+                  <h3 className="text-2xl font-black text-[#111b21]">Perfil</h3>
+                  <button onClick={() => setShowProfileEdit(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X size={24} /></button>
+                </div>
+
+                <div className="flex flex-col items-center gap-6">
+                  <div className="relative group cursor-pointer">
+                    <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-[#00a884]/20">
+                      <img src={userProfile.avatar} className="w-full h-full object-cover" />
+                    </div>
+                    <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Camera className="text-white" size={32} />
+                    </div>
+                  </div>
+
+                  <div className="w-full space-y-4">
+                    <div>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-[#00a884] mb-1 block">Seu Nome</label>
+                      <input 
+                        className="w-full border-b-2 border-gray-100 py-3 text-xl font-bold outline-none focus:border-[#00a884] transition-colors"
+                        value={userProfile.name}
+                        onChange={(e) => setUserProfile(prev => ({ ...prev, name: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-[#00a884] mb-1 block">Recado</label>
+                      <input 
+                        className="w-full border-b-2 border-gray-100 py-3 text-lg outline-none focus:border-[#00a884] transition-colors"
+                        value={userProfile.status}
+                        onChange={(e) => setUserProfile(prev => ({ ...prev, status: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-2 w-full mt-4">
+                    {[
+                      'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop',
+                      'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop',
+                      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop',
+                      'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
+                    ].map(url => (
+                      <button 
+                        key={url}
+                        onClick={() => setUserProfile(prev => ({ ...prev, avatar: url }))}
+                        className={`w-full aspect-square rounded-xl overflow-hidden border-2 transition-all ${userProfile.avatar === url ? 'border-[#00a884] scale-105 shadow-lg' : 'border-transparent opacity-60 hover:opacity-100'}`}
+                      >
+                         <img src={url} className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+
+                  <button 
+                    onClick={() => setShowProfileEdit(false)}
+                    className="w-full bg-[#00a884] text-white py-4 rounded-2xl font-black text-xl mt-6 shadow-xl active:scale-95 transition-all"
+                  >
+                    Salvar Mudanças
+                  </button>
+                </div>
+             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Folder Selection Modal */}
+      <AnimatePresence>
+        {showFolderSelect && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[150] flex items-center justify-center p-4"
+          >
+             <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              className="bg-white rounded-[2rem] w-full max-w-sm shadow-2xl p-8 border-4 border-blue-500"
+             >
+                <h3 className="text-xl font-black text-[#111b21] mb-6 flex items-center gap-3">
+                  <Save size={24} className="text-blue-500" /> Onde deseja salvar?
+                </h3>
+                
+                <div className="space-y-3 mb-8">
+                  {[
+                    { id: null, name: 'Área de Trabalho', icon: <MonitorIcon size={18} /> },
+                    { id: '1', name: 'Meus Documentos', icon: <Folder size={18} /> },
+                    { id: '2', name: 'Fotos de Família', icon: <Folder size={18} /> },
+                  ].map(folder => (
+                    <button 
+                      key={folder.name}
+                      onClick={() => {
+                        (window as any).onSaveToSimulator?.(showFolderSelect.name, showFolderSelect.type, folder.id);
+                        setShowFolderSelect(null);
+                      }}
+                      className="w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl transition-all border border-gray-100 font-bold text-gray-700 hover:border-blue-200"
+                    >
+                      <div className="text-blue-500">{folder.icon}</div>
+                      {folder.name}
+                    </button>
+                  ))}
+                </div>
+
+                <button 
+                  onClick={() => setShowFolderSelect(null)}
+                  className="w-full py-3 text-gray-400 font-bold hover:text-gray-600"
+                >
+                  Cancelar
+                </button>
+             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       
       <style>{`
         .clip-path-msg-me {

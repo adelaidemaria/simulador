@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Folder, ChevronRight, ChevronDown, Monitor, HardDrive, File as FileIcon, Search, ArrowLeft, ArrowRight, ArrowUp, RefreshCw, Usb, FileText, Table } from 'lucide-react';
+import { Folder, ChevronRight, ChevronDown, Monitor, HardDrive, File as FileIcon, Search, ArrowLeft, ArrowRight, ArrowUp, RefreshCw, Usb, FileText, Table, Edit2, Trash } from 'lucide-react';
 import WindowsDialog from './WindowsDialog';
 
 interface FileItem {
@@ -43,6 +43,7 @@ export default function WindowsExplorerMock({ onOpenFile }: WindowsExplorerMockP
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; item: FileItem | null } | null>(null);
   const [clipboard, setClipboard] = useState<{ item: FileItem; action: 'copy' | 'move' } | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [dialogConfig, setDialogConfig] = useState<{
     type: 'confirm' | 'error' | 'info';
@@ -101,6 +102,13 @@ export default function WindowsExplorerMock({ onOpenFile }: WindowsExplorerMockP
 
   const closeContextMenu = () => {
     setContextMenu(null);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'F2' && selectedId && !renamingId) {
+      const item = items.find(i => i.id === selectedId);
+      if (item) handleRename(item);
+    }
   };
 
   const closeDialog = () => setIsDialogOpen(false);
@@ -241,6 +249,7 @@ export default function WindowsExplorerMock({ onOpenFile }: WindowsExplorerMockP
 
   const handleRename = (item: FileItem) => {
     setRenamingId(item.id);
+    setSelectedId(item.id);
     closeContextMenu();
   };
 
@@ -248,10 +257,13 @@ export default function WindowsExplorerMock({ onOpenFile }: WindowsExplorerMockP
 
   return (
     <div 
-      className="flex flex-col h-full bg-white text-xs text-gray-800 relative font-sans"
+      className="flex flex-col h-full bg-white text-xs text-gray-800 relative font-sans outline-none"
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
       onClick={() => {
         closeContextMenu();
         if (renamingId) setRenamingId(null);
+        setSelectedId(null);
       }}
       onContextMenu={(e) => {
           if (e.target === e.currentTarget) handleContextMenu(e, null);
@@ -290,6 +302,32 @@ export default function WindowsExplorerMock({ onOpenFile }: WindowsExplorerMockP
                     <FileIcon size={24} className="fill-yellow-100" />
                 </div>
                 <span className="text-[10px]">Colar</span>
+            </div>
+            <div 
+              onClick={(e) => {
+                e.stopPropagation();
+                if (selectedId) {
+                  const item = items.find(i => i.id === selectedId);
+                  if (item) handleRename(item);
+                }
+              }}
+              className={`flex flex-col items-center justify-center p-1 border border-transparent rounded min-w-[50px] ${selectedId ? 'hover:bg-blue-100 hover:border-blue-200 cursor-pointer text-blue-600' : 'opacity-40 cursor-not-allowed'}`}
+            >
+                <Edit2 size={24} className="mb-1" />
+                <span className="text-[10px]">Renomear</span>
+            </div>
+            <div 
+              onClick={(e) => {
+                e.stopPropagation();
+                if (selectedId) {
+                  const item = items.find(i => i.id === selectedId);
+                  if (item) handleDelete(item);
+                }
+              }}
+              className={`flex flex-col items-center justify-center p-1 border border-transparent rounded min-w-[50px] ${selectedId ? 'hover:bg-red-50 hover:border-red-200 cursor-pointer text-red-600' : 'opacity-40 cursor-not-allowed'}`}
+            >
+                <Trash size={24} className="mb-1" />
+                <span className="text-[10px]">Excluir</span>
             </div>
             <div className="flex flex-col items-center justify-center p-1 hover:bg-blue-100 border border-transparent hover:border-blue-200 rounded cursor-pointer min-w-[50px] opacity-40">
                 <FileIcon size={24} className="text-gray-500 mb-1" />
@@ -402,7 +440,11 @@ export default function WindowsExplorerMock({ onOpenFile }: WindowsExplorerMockP
                  {currentItems.map((item) => (
                      <div 
                         key={item.id} 
-                        className="flex hover:bg-[#e5f3ff] cursor-pointer group items-center"
+                        className={`flex group items-center border border-transparent transition-colors ${selectedId === item.id ? 'bg-[#e5f3ff] border-[#cce8ff]' : 'hover:bg-[#f5faff] cursor-pointer'}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedId(item.id);
+                        }}
                         onDoubleClick={(e) => { e.stopPropagation(); handleDoubleClick(item); }}
                         onContextMenu={(e) => { e.stopPropagation(); handleContextMenu(e, item); }}
                      >
@@ -436,7 +478,17 @@ export default function WindowsExplorerMock({ onOpenFile }: WindowsExplorerMockP
                                   }}
                                 />
                              ) : (
-                                <span className="truncate flex-1">{item.name}</span>
+                                <span 
+                                  className="truncate flex-1 py-1"
+                                  onClick={(e) => {
+                                    if (selectedId === item.id) {
+                                      e.stopPropagation();
+                                      handleRename(item);
+                                    }
+                                  }}
+                                >
+                                  {item.name}
+                                </span>
                              )}
                          </div>
                          <div className="w-[150px] px-2 py-0.5 truncate text-gray-500 group-hover:text-gray-800">{item.date}</div>
