@@ -14,6 +14,7 @@ import {
   X, 
   Plus, 
   Trash,
+  Check,
   ExternalLink,
   ChevronRight,
   ChevronDown,
@@ -44,19 +45,22 @@ import {
   Copy,
   Clipboard,
   ArrowRight,
-  Mouse
+  Mouse,
+  Brain,
+  MessageCircle
 } from 'lucide-react';
 
 import WindowsExplorerMock from './components/WindowsExplorerMock';
 import WordSimulator from './components/WordSimulator';
 import ExcelSimulator from './components/ExcelSimulator';
 import MouseSimulator from './components/MouseSimulator';
+import WhatsAppSimulator from './components/WhatsAppSimulator';
 
 
 // --- Types ---
 
-type ItemType = 'folder' | 'word' | 'excel' | 'photo' | 'virus' | 'lessons' | 'explorer_shortcut' | 'txt' | 'png' | 'jpg' | 'chrome' | 'gmail' | 'mouse_training';
-type AppType = 'explorer' | 'chrome' | 'gmail' | 'trash' | 'settings' | 'virus_warning' | 'typing' | 'windows_explorer' | 'photo_viewer' | 'word_simulator' | 'excel_simulator' | 'mouse_simulator';
+type ItemType = 'folder' | 'word' | 'excel' | 'photo' | 'virus' | 'lessons' | 'explorer_shortcut' | 'txt' | 'png' | 'jpg' | 'chrome' | 'gmail' | 'mouse_training' | 'quiz' | 'memory_game' | 'whatsapp';
+type AppType = 'explorer' | 'chrome' | 'gmail' | 'trash' | 'settings' | 'virus_warning' | 'typing' | 'windows_explorer' | 'photo_viewer' | 'word_simulator' | 'excel_simulator' | 'mouse_simulator' | 'whatsapp';
 
 interface DesktopItem {
   id: string;
@@ -77,6 +81,7 @@ interface WindowState {
   isMaximized: boolean;
   zIndex: number;
   folderId?: string | null; // For explorer
+  quiz_stage?: number; 
 }
 
 interface Email {
@@ -114,50 +119,53 @@ const LESSONS: Lesson[] = [
   },
   {
     id: 3,
-    title: 'Identificando Phishing',
+    title: 'Segurança no E-mail',
     description: 'Abra o Gmail e clique no e-mail suspeito do Banco Falso para identificá-lo.',
     level: 'Médio',
     goal: 'identify_phishing'
   },
   {
     id: 4,
-    title: 'Criando Documentos',
-    description: 'Crie um novo arquivo de Word na área de trabalho clicando com o botão direito -> Novo Item -> Word.',
+    title: 'Navegação Web',
+    description: 'Abra o Google Chrome e clique no botão de pesquisa para simular uma busca.',
     level: 'Fácil',
-    goal: 'create_word'
+    goal: 'open_chrome'
   },
   {
       id: 5,
-      title: 'Digitando Texto',
-      description: 'Abra o Word e digite o texto solicitado.',
+      title: 'Prática de Digitação',
+      description: 'Crie ou abra um documento Word e digite a frase: EU VOU APRENDER A DIGITAR',
       level: 'Médio',
       goal: 'typing_test'
   },
   {
       id: 6,
-      title: 'Organizando Arquivos',
-      description: 'Crie uma pasta chamada "Estudos" e mova os arquivos de Word e Excel para dentro dela.',
+      title: 'Gerenciar Arquivos',
+      description: 'Crie uma pasta chamada "Documentos" e mova o arquivo de Word para dentro dela para organizar seu computador.',
       level: 'Difícil',
       goal: 'move_items'
   },
   {
     id: 7, 
-    title: 'Evitando Vírus', 
-    description: 'Cuidado! Há um vírus na tela. Em vez de abrir, arraste-o direto para a lixeira para proteger seu computador.', 
-    level: 'Difícil', 
-    goal: 'avoid_virus' 
+    title: 'Personalização', 
+    description: 'Mude o plano de fundo do seu computador: clique com o botão DIREITO no fundo, vá em Personalizar e escolha uma nova imagem.', 
+    level: 'Médio', 
+    goal: 'change_wallpaper' 
   }
 ];
 
 const DEFAULT_ITEMS: DesktopItem[] = [
   { id: '1', name: 'Meus Documentos', type: 'folder', x: 50, y: 50, parentId: null },
   { id: '2', name: 'Fotos de Família', type: 'folder', x: 50, y: 160, parentId: null },
-  { id: '3', name: 'Boleto_Urgente.exe', type: 'virus', x: 160, y: 50, parentId: null, isInfected: true },
-  { id: '5', name: 'LIÇÕES', type: 'lessons', x: 50, y: 270, parentId: null },
-  { id: '6', name: 'Windows Explorer', type: 'explorer_shortcut', x: 160, y: 270, parentId: null },
+  { id: '6', name: 'Windows Explorer', type: 'explorer_shortcut', x: 50, y: 270, parentId: null },
+  { id: '3', name: 'Boleto_Urgente.exe', type: 'virus', x: 50, y: 380, parentId: null, isInfected: true },
+  { id: '5', name: 'LIÇÕES', type: 'lessons', x: 410, y: 40, parentId: null },
+  { id: 'gmail-desktop', name: 'Gmail', type: 'gmail', x: 160, y: 50, parentId: null },
   { id: 'chrome-desktop', name: 'Google Chrome', type: 'chrome', x: 160, y: 160, parentId: null },
-  { id: 'gmail-desktop', name: 'Gmail', type: 'gmail', x: 270, y: 50, parentId: null },
-  { id: 'mouse-training', name: 'Treino de Mouse', type: 'mouse_training', x: 270, y: 160, parentId: null },
+  { id: 'mouse-training', name: 'Treino de Mouse', type: 'mouse_training', x: 520, y: 40, parentId: null },
+  { id: 'quiz-shortcut', name: 'Quiz Master', type: 'quiz', x: 630, y: 40, parentId: null },
+  { id: 'memory-shortcut', name: 'Jogo da Memória', type: 'memory_game', x: 740, y: 40, parentId: null },
+  { id: 'whatsapp-desktop', name: 'WhatsApp', type: 'whatsapp', x: 160, y: 270, parentId: null },
 
   // Meus Documentos contents
   { id: 'md1', name: 'Relatório.doc', type: 'word', x: 0, y: 0, parentId: '1' },
@@ -195,10 +203,9 @@ export default function App() {
   const SAVE_KEY = 'simulador_informatica_v1';
 
   // State initialization with Persistence
-  const [items, setItems] = useState<DesktopItem[]>(() => {
-    const saved = localStorage.getItem(`${SAVE_KEY}_items`);
-    return saved ? JSON.parse(saved) : DEFAULT_ITEMS;
-  });
+  const [items, setItems] = useState<DesktopItem[]>(DEFAULT_ITEMS);
+
+
 
   const [deletedItems, setDeletedItems] = useState<DesktopItem[]>(() => {
     const saved = localStorage.getItem(`${SAVE_KEY}_deleted`);
@@ -228,6 +235,10 @@ export default function App() {
   const [fontSize, setFontSize] = useState(1);
   const [isHighContrast, setIsHighContrast] = useState(false);
   const [lessonSuccess, setLessonSuccess] = useState(false);
+  const [completedLessonIds, setCompletedLessonIds] = useState<number[]>(() => {
+    const saved = localStorage.getItem('completed_lesson_ids');
+    return saved ? JSON.parse(saved) : [];
+  });
   
   const [totalScore, setTotalScore] = useState<number>(() => {
     const saved = localStorage.getItem(`${SAVE_KEY}_score`);
@@ -247,6 +258,18 @@ export default function App() {
   });
 
   const [showPowerOptions, setShowPowerOptions] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem('completed_lesson_ids', JSON.stringify(completedLessonIds));
+  }, [completedLessonIds]);
+
+  useEffect(() => {
+    if (lessonSuccess && currentLesson) {
+      if (!completedLessonIds.includes(currentLesson.id)) {
+        setCompletedLessonIds(prev => [...prev, currentLesson.id]);
+      }
+    }
+  }, [lessonSuccess, currentLesson]);
   
   // Gmail State
   const [emails, setEmails] = useState<Email[]>(() => {
@@ -273,10 +296,7 @@ export default function App() {
   const desktopRef = useRef<HTMLDivElement>(null);
   const trashRef = useRef<HTMLDivElement>(null);
 
-  // Persistence Effects
-  useEffect(() => {
-    localStorage.setItem(`${SAVE_KEY}_items`, JSON.stringify(items));
-  }, [items]);
+
 
   useEffect(() => {
     localStorage.setItem(`${SAVE_KEY}_deleted`, JSON.stringify(deletedItems));
@@ -320,14 +340,16 @@ export default function App() {
     // Increased time to 8 seconds (3s original + 5s requested) to allow reading the warning message
     setTimeout(() => {
       setSystemStatus('starting');
+      setItems(DEFAULT_ITEMS); // Reset icon positions on restart
+      setWindows([]); // Close all windows
       setTimeout(() => {
         setSystemStatus('login');
       }, 3000);
     }, 8000);
   };
 
-  const openWindow = (type: AppType, title: string, folderId: string | null = null) => {
-    const existing = windows.find(w => w.type === type && w.folderId === folderId);
+  const openWindow = (type: AppType, title: string, folderId: string | null = null, quiz_stage: number = -1) => {
+    const existing = windows.find(w => w.type === type && w.folderId === folderId && w.quiz_stage === quiz_stage);
     if (existing) {
       setActiveWindowId(existing.id);
       return;
@@ -338,9 +360,10 @@ export default function App() {
       type,
       title,
       isOpen: true,
-      isMaximized: type === 'mouse_simulator',
+      isMaximized: type === 'mouse_simulator' || type === 'whatsapp',
       zIndex: maxZIndex + 1,
-      folderId
+      folderId,
+      quiz_stage
     };
     setWindows([...windows, newWindow]);
     setActiveWindowId(newWindow.id);
@@ -391,11 +414,17 @@ export default function App() {
         i.id !== id && 
         i.type === 'folder' && 
         i.parentId === null &&
-        x >= i.x + desktopRect.left - 20 && x <= i.x + desktopRect.left + 120 &&
-        y >= i.y + desktopRect.top - 20 && y <= i.y + desktopRect.top + 120
+        x >= i.x + desktopRect.left - 30 && x <= i.x + desktopRect.left + 130 &&
+        y >= i.y + desktopRect.top - 30 && y <= i.y + desktopRect.top + 130
       );
 
       if (droppedOnFolder) {
+        if (currentLesson?.goal === 'move_items') {
+          const points = 200;
+          setLastPoints(points);
+          setTotalScore(s => s + points);
+          setLessonSuccess(true);
+        }
         return prev.map(item => 
           item.id === id ? { ...item, parentId: droppedOnFolder.id, x: 0, y: 0 } : item
         );
@@ -541,6 +570,12 @@ export default function App() {
       openWindow('gmail', 'Gmail');
     } else if (item.type === 'mouse_training') {
       openWindow('mouse_simulator', 'Treinamento de Mouse');
+    } else if (item.type === 'quiz') {
+      openWindow('mouse_simulator', 'Quiz Master', null, 21);
+    } else if (item.type === 'memory_game') {
+      openWindow('mouse_simulator', 'Jogo da Memória', null, 23);
+    } else if (item.type === 'whatsapp') {
+      openWindow('whatsapp', 'WhatsApp');
     }
   };
 
@@ -585,6 +620,26 @@ export default function App() {
       case 'txt': return <FileText size={size} className="text-gray-500" />;
       case 'virus': return <ShieldAlert size={size} className="text-red-600" />;
       case 'lessons': return <Trophy size={size} className="text-yellow-500" />;
+      case 'whatsapp': return (
+        <div className="p-2 bg-[#25D366] rounded-xl shadow-lg border border-green-400 flex items-center justify-center">
+          <MessageCircle size={size - 16} className="text-white" />
+        </div>
+      );
+      case 'mouse_training': return (
+        <div className="p-2 bg-blue-600 rounded-xl shadow-lg flex items-center justify-center">
+          <Mouse size={size - 16} className="text-white" />
+        </div>
+      );
+      case 'quiz': return (
+        <div className="p-2 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-xl shadow-lg border border-yellow-300 flex items-center justify-center">
+          <Trophy size={size - 16} className="text-white" />
+        </div>
+      );
+      case 'memory_game': return (
+        <div className="p-2 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl shadow-lg border border-purple-400 flex items-center justify-center">
+          <Brain size={size - 16} className="text-white" />
+        </div>
+      );
       case 'explorer_shortcut': return <Folder size={size} className="text-yellow-400 fill-yellow-200" />;
       case 'chrome': return (
         <div className="p-2 bg-white rounded-xl shadow-lg border border-gray-100 flex items-center justify-center">
@@ -596,9 +651,19 @@ export default function App() {
           <Mail size={size - 16} className="text-red-500" />
         </div>
       );
+      case 'whatsapp': return (
+        <div className="p-2 bg-[#25D366] rounded-xl shadow-lg border border-green-400 flex items-center justify-center">
+          <MessageCircle size={size - 16} className="text-white" />
+        </div>
+      );
       case 'mouse_training': return (
         <div className="p-2 bg-blue-600 rounded-xl shadow-lg border border-blue-400 flex items-center justify-center">
           <Mouse size={size - 16} className="text-white" />
+        </div>
+      );
+      case 'quiz': return (
+        <div className="p-2 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-xl shadow-lg border border-yellow-300 flex items-center justify-center">
+          <Trophy size={size - 16} className="text-white drop-shadow-md" />
         </div>
       );
     }
@@ -737,8 +802,8 @@ export default function App() {
           onClick={() => focusWindow(win.id)}
           onContextMenu={(e) => { e.stopPropagation(); setContextMenu(null); }}
           className={`fixed bg-white rounded-lg shadow-2xl border border-gray-300 flex flex-col overflow-hidden ${
-            win.isMaximized || win.type === 'typing' 
-              ? 'inset-0 sm:inset-4 md:inset-8 !translate-x-0 !translate-y-0' 
+            win.isMaximized || win.type === 'typing' || win.type === 'whatsapp'
+              ? 'top-0 left-0 right-0 bottom-12 !translate-x-0 !translate-y-0 shadow-none border-none rounded-none' 
               : 'w-[800px] h-[500px] top-20 left-40'
           }`}
         >
@@ -755,6 +820,7 @@ export default function App() {
               {win.type === 'word_simulator' && <FileText size={18} className="text-blue-600" />}
               {win.type === 'excel_simulator' && <Table size={18} className="text-green-600" />}
               {win.type === 'mouse_simulator' && <Mouse size={18} className="text-blue-600" />}
+              {win.type === 'whatsapp' && <MessageCircle size={18} className="text-[#25D366]" />}
               <span>{win.title}</span>
             </div>
             <div className="flex items-center gap-1">
@@ -837,7 +903,15 @@ export default function App() {
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter' && chromeSearchQuery.trim()) {
                                   setIsChromeLoading(true);
-                                  setTimeout(() => setIsChromeLoading(false), 900);
+                                  setTimeout(() => {
+                                    setIsChromeLoading(false);
+                                    if (currentLesson?.goal === 'open_chrome') {
+                                      const points = 100;
+                                      setLastPoints(points);
+                                      setTotalScore(prev => prev + points);
+                                      setLessonSuccess(true);
+                                    }
+                                  }, 900);
                                 }
                               }}
                             />
@@ -908,6 +982,12 @@ export default function App() {
                                 setTimeout(() => {
                                   setIsChromeLoading(false);
                                   setIsShowingChromeResults(true);
+                                  if (currentLesson?.goal === 'open_chrome') {
+                                    const points = 100;
+                                    setLastPoints(points);
+                                    setTotalScore(prev => prev + points);
+                                    setLessonSuccess(true);
+                                  }
                                 }, 1500);
                               }
                             }}
@@ -915,17 +995,26 @@ export default function App() {
                         </div>
 
                         <div className="flex gap-6 mt-16 scale-110">
-                           <button 
-                             onClick={() => { 
-                               if(chromeSearchQuery.trim()) { 
-                                 setIsChromeLoading(true); 
-                                 setTimeout(() => { setIsChromeLoading(false); setIsShowingChromeResults(true); }, 1200); 
-                               }
-                             }} 
-                             className="bg-gray-50 px-10 py-4 rounded-xl text-sm hover:border-gray-300 border-2 border-transparent font-bold text-gray-600 hover:shadow-lg transition-all active:scale-95"
-                           >
-                             Pesquisa Google
-                           </button>
+                            <button 
+                              onClick={() => { 
+                                if(chromeSearchQuery.trim()) { 
+                                  setIsChromeLoading(true); 
+                                  setTimeout(() => { 
+                                    setIsChromeLoading(false); 
+                                    setIsShowingChromeResults(true); 
+                                    if (currentLesson?.goal === 'open_chrome') {
+                                      const points = 100;
+                                      setLastPoints(points);
+                                      setTotalScore(prev => prev + points);
+                                      setLessonSuccess(true);
+                                    }
+                                  }, 1200); 
+                                }
+                              }} 
+                              className="bg-gray-50 px-10 py-4 rounded-xl text-sm hover:border-gray-300 border-2 border-transparent font-bold text-gray-600 hover:shadow-lg transition-all active:scale-95"
+                            >
+                              Pesquisa Google
+                            </button>
                            <button className="bg-gray-50 px-10 py-4 rounded-xl text-sm hover:border-gray-300 border-2 border-transparent font-bold text-gray-600 hover:shadow-lg transition-all active:scale-95">Estou com Sorte</button>
                         </div>
                       </div>
@@ -1453,15 +1542,29 @@ export default function App() {
             )}
 
             {win.type === 'word_simulator' && (
-              <WordSimulator fileName={win.title} />
+              <WordSimulator 
+                fileName={win.title} 
+                onContentChange={(text) => {
+                  if (currentLesson?.goal === 'typing_test' && text.toUpperCase().includes('EU VOU APRENDER A DIGITAR')) {
+                    const points = 200;
+                    setLastPoints(points);
+                    setTotalScore(prev => prev + points);
+                    setLessonSuccess(true);
+                  }
+                }}
+              />
             )}
 
             {win.type === 'excel_simulator' && (
               <ExcelSimulator fileName={win.title} />
             )}
 
+            {win.type === 'whatsapp' && (
+              <WhatsAppSimulator />
+            )}
+
             {win.type === 'mouse_simulator' && (
-              <MouseSimulator onClose={() => closeWindow(win.id)} />
+              <MouseSimulator initialStage={win.quiz_stage} onClose={() => closeWindow(win.id)} />
             )}
           </div>
         </motion.div>
@@ -1490,6 +1593,7 @@ export default function App() {
             onClick={() => focusWindow(win.id)}
             className={`h-10 px-4 flex items-center gap-2 transition-all cursor-pointer rounded-t ${activeWindowId === win.id ? 'bg-white/20 border-b-2 border-blue-500 text-white' : 'text-white/60 hover:bg-white/10'}`}
           >
+            {win.type === 'whatsapp' && <MessageCircle size={16} className="text-green-400" />}
             {win.type === 'chrome' && <Chrome size={16} className="text-blue-400" />}
             {win.type === 'gmail' && <Mail size={16} className="text-red-400" />}
             {win.type === 'explorer' && <Folder size={16} className="text-yellow-400" />}
@@ -1582,6 +1686,18 @@ export default function App() {
                   <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg"><Mouse size={32} /></div>
                   <span className="text-xs font-medium text-center">Treino de<br/>Mouse</span>
                 </div>
+                <div onClick={() => { openWindow('mouse_simulator', 'Quiz Master', null, 21); setShowStartMenu(false); }} className="flex flex-col items-center gap-3 p-3 hover:bg-white/5 rounded-xl cursor-pointer transition-all hover:scale-105">
+                  <div className="w-14 h-14 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-2xl flex items-center justify-center shadow-lg shadow-yellow-500/20 border border-yellow-300/30"><Trophy size={32} className="text-white drop-shadow-md" /></div>
+                  <span className="text-xs font-medium text-center text-yellow-400 font-bold">Quiz<br/>Master</span>
+                </div>
+                <div onClick={() => { openWindow('mouse_simulator', 'Memory Game', null, 23); setShowStartMenu(false); }} className="flex flex-col items-center gap-3 p-3 hover:bg-white/5 rounded-xl cursor-pointer transition-all hover:scale-105">
+                  <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/20 border border-purple-300/30"><Brain size={32} className="text-white drop-shadow-md" /></div>
+                  <span className="text-xs font-medium text-center text-purple-400 font-bold">Jogo da<br/>Memória</span>
+                </div>
+                <div onClick={() => { openWindow('whatsapp', 'WhatsApp'); setShowStartMenu(false); }} className="flex flex-col items-center gap-3 p-3 hover:bg-white/5 rounded-xl cursor-pointer transition-all hover:scale-105">
+                  <div className="w-14 h-14 bg-[#25D366] rounded-2xl flex items-center justify-center shadow-lg shadow-green-500/20 border border-green-300/30"><MessageCircle size={32} className="text-white" /></div>
+                  <span className="text-xs font-medium text-center text-green-400 font-bold">WhatsApp</span>
+                </div>
               </div>
             </div>
           </motion.div>
@@ -1663,35 +1779,58 @@ export default function App() {
                   <div className="px-4 py-1 bg-blue-100 text-blue-600 rounded-full text-[10px] font-black uppercase">7 Desafios</div>
                 </div>
 
-                <div className="grid gap-4">
-                  {LESSONS.map((lesson) => (
-                    <motion.div 
-                      key={lesson.id}
-                      whileHover={{ x: 10 }}
-                      onClick={() => { setCurrentLesson(lesson); setShowLessonMenu(false); }}
-                      className="group bg-white p-8 rounded-[2rem] border-2 border-transparent hover:border-blue-500 cursor-pointer shadow-sm hover:shadow-2xl transition-all flex items-center gap-8"
-                    >
-                      <div className={`w-20 h-20 rounded-[1.5rem] flex items-center justify-center text-white font-black text-3xl shadow-lg transition-transform group-hover:scale-110 group-hover:rotate-3 ${
-                        lesson.level === 'Fácil' ? 'bg-green-500 shadow-green-100' : lesson.level === 'Médio' ? 'bg-yellow-500 shadow-yellow-100' : 'bg-red-500 shadow-red-100'
-                      }`}>
-                        {lesson.id}
-                      </div>
-                      
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${
-                            lesson.level === 'Fácil' ? 'bg-green-100 text-green-700' : lesson.level === 'Médio' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
-                          }`}>{lesson.level}</span>
-                          <h4 className="text-2xl font-black text-gray-900 tracking-tight">{lesson.title}</h4>
+                <div className="grid grid-cols-1 gap-5">
+                  {LESSONS.map((lesson) => {
+                    const isCompleted = completedLessonIds.includes(lesson.id);
+                    const isActive = currentLesson?.id === lesson.id;
+
+                    return (
+                      <motion.div 
+                        key={lesson.id}
+                        whileHover={{ x: 10, scale: 1.01 }}
+                        onClick={() => { setCurrentLesson(lesson); setShowLessonMenu(false); }}
+                        className={`group p-6 rounded-[2.5rem] border-4 transition-all flex items-center gap-6 relative overflow-hidden backdrop-blur-sm ${
+                          isActive 
+                            ? 'bg-blue-50 border-blue-500 shadow-2xl scale-[1.02]' 
+                            : isCompleted
+                              ? 'bg-green-50/30 border-green-200 opacity-80'
+                              : 'bg-white border-transparent hover:border-blue-200 shadow-sm hover:shadow-xl'
+                        }`}
+                      >
+                        {isCompleted && (
+                          <div className="absolute top-4 right-4 bg-green-500 text-white p-1 rounded-full shadow-lg z-10">
+                            <Check size={16} />
+                          </div>
+                        )}
+
+                        <div className={`w-16 h-16 rounded-3xl flex items-center justify-center text-white font-black text-2xl shadow-lg transition-transform group-hover:scale-110 group-hover:rotate-3 flex-shrink-0 ${
+                          isCompleted ? 'bg-green-500' :
+                          lesson.level === 'Fácil' ? 'bg-blue-400' : lesson.level === 'Médio' ? 'bg-indigo-500' : 'bg-purple-600'
+                        }`}>
+                          {lesson.id}
                         </div>
-                        <p className="text-gray-500 text-lg font-medium leading-snug">{lesson.description.substring(0, 80)}...</p>
-                      </div>
-                      
-                      <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center text-gray-300 group-hover:bg-blue-600 group-hover:text-white transition-all">
-                        <ChevronRight size={24} />
-                      </div>
-                    </motion.div>
-                  ))}
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3 mb-1 flex-wrap">
+                            <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${
+                              isCompleted ? 'bg-green-100 text-green-700' :
+                              lesson.level === 'Fácil' ? 'bg-blue-100 text-blue-700' : lesson.level === 'Médio' ? 'bg-indigo-100 text-indigo-700' : 'bg-purple-100 text-purple-700'
+                            }`}>{isCompleted ? 'CONCLUÍDO' : lesson.level}</span>
+                            <h4 className={`text-xl font-black tracking-tight truncate ${isCompleted ? 'text-gray-400' : 'text-gray-900'}`}>{lesson.title}</h4>
+                          </div>
+                          <p className="text-gray-500 text-sm font-medium leading-tight line-clamp-1">{lesson.description}</p>
+                        </div>
+                        
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${
+                          isCompleted 
+                            ? 'bg-green-100 text-green-600' 
+                            : isActive ? 'bg-blue-600 text-white' : 'bg-gray-50 text-gray-300 group-hover:bg-blue-600 group-hover:text-white'
+                        }`}>
+                          {isCompleted ? <CheckCircle2 size={20} /> : <ChevronRight size={20} />}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
                 </div>
               </div>
             </motion.div>
@@ -1760,6 +1899,12 @@ export default function App() {
                 <div className="border-t border-gray-100 my-1"></div>
                 <div onClick={() => createItem('folder')} className="px-3 py-1.5 hover:bg-blue-600 hover:text-white cursor-pointer flex items-center gap-3">
                   <Folder size={12} className="text-yellow-500" /> Nova Pasta
+                </div>
+                <div onClick={() => createItem('word')} className="px-3 py-1.5 hover:bg-blue-600 hover:text-white cursor-pointer flex items-center gap-3">
+                  <FileText size={12} className="text-blue-500" /> Documento Word
+                </div>
+                <div onClick={() => createItem('excel')} className="px-3 py-1.5 hover:bg-blue-600 hover:text-white cursor-pointer flex items-center gap-3">
+                  <Table size={12} className="text-green-600" /> Planilha Excel
                 </div>
                 <div className="border-t border-gray-100 my-1"></div>
                 <div onClick={() => { openWindow('settings', 'Configurações'); setContextMenu(null); }} className="px-3 py-1.5 hover:bg-blue-600 hover:text-white cursor-pointer flex items-center gap-3 font-semibold">
@@ -1830,12 +1975,22 @@ export default function App() {
               <button 
                 onClick={() => {
                   setLessonSuccess(false);
-                  setCurrentLesson(null);
-                  setShowLessonMenu(true);
+                  setWindows([]); // Close all windows for a clean start
+                  setIsShowingChromeResults(false);
+                  setChromeSearchQuery('');
+                  setReadingEmail(null);
+                  
+                  const nextLesson = LESSONS.find(l => !completedLessonIds.includes(l.id) && l.id !== currentLesson?.id);
+                  if (nextLesson) {
+                    setCurrentLesson(nextLesson);
+                  } else {
+                    setCurrentLesson(null);
+                    setShowLessonMenu(true);
+                  }
                 }}
-                className="w-full bg-green-600 text-white py-6 rounded-2xl font-black text-2xl hover:bg-green-700 transition-all shadow-xl active:scale-95 hover:shadow-green-200"
+                className="w-full bg-green-600 text-white py-6 rounded-2xl font-black text-2xl hover:bg-green-700 transition-all shadow-xl active:scale-95 hover:shadow-green-200 flex items-center justify-center gap-3"
               >
-                Próximo Desafio
+                PRÓXIMO DESAFIO <ArrowRight size={24} />
               </button>
             </motion.div>
           </motion.div>
@@ -1867,6 +2022,12 @@ export default function App() {
                 <p className="text-2xl font-bold text-gray-800 leading-tight">
                   {currentLesson.description}
                 </p>
+                {currentLesson.goal === 'typing_test' && (
+                  <div className="mt-6 bg-yellow-400 p-8 rounded-[2rem] border-8 border-white shadow-xl flex flex-col items-center animate-bounce-subtle">
+                    <span className="text-xs font-black text-yellow-900 uppercase tracking-widest mb-2 opacity-60">FRASE PARA DIGITAR:</span>
+                    <span className="text-4xl font-black text-yellow-900 tracking-tight drop-shadow-sm select-none">EU VOU APRENDER A DIGITAR</span>
+                  </div>
+                )}
               </div>
 
               {/* Right: Actions */}

@@ -25,9 +25,10 @@ import {
 
 interface WordSimulatorProps {
   fileName?: string;
+  onContentChange?: (content: string) => void;
 }
 
-export default function WordSimulator({ fileName = 'Documento 1.docx' }: WordSimulatorProps) {
+export default function WordSimulator({ fileName = 'Documento 1.docx', onContentChange }: WordSimulatorProps) {
   const [content, setContent] = useState('');
   const [fontSize, setFontSize] = useState('11');
   const [fontFamily, setFontFamily] = useState('Calibri (Corpo)');
@@ -161,7 +162,11 @@ export default function WordSimulator({ fileName = 'Documento 1.docx' }: WordSim
               fontFamily: fontFamily.includes('Calibri') ? 'Calibri, sans-serif' : fontFamily
             }}
             value={content}
-            onChange={(e) => setContent(e.target.value)}
+            onChange={(e) => {
+              const newContent = e.target.value;
+              setContent(newContent);
+              if (onContentChange) onContentChange(newContent);
+            }}
             spellCheck={false}
           />
         </div>
