@@ -249,6 +249,7 @@ export default function App() {
 
   const [lastPoints, setLastPoints] = useState(0);
   const [maxZIndex, setMaxZIndex] = useState(10);
+  const [showFullscreenExitDialog, setShowFullscreenExitDialog] = useState(false);
   const [settingsTab, setSettingsTab] = useState<'personalization' | 'accessibility'>('personalization');
   
   // New System States
@@ -353,6 +354,22 @@ export default function App() {
     };
     return () => { delete (window as any).onSaveToSimulator; };
   }, []);
+  
+  // Fullscreen Exit Keyboard Listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && document.fullscreenElement) {
+        // We can't actually prevent common browsers from exiting on first Esc,
+        // but we can catch subsequent ones or provide a way to stay out.
+        // Actually, if we are in simulator, Esc should show the dialog.
+        if (isSimulatorActive) {
+          setShowFullscreenExitDialog(true);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSimulatorActive]);
 
   // --- Helpers ---
 
@@ -1720,6 +1737,26 @@ export default function App() {
 
         <div className="flex-1"></div>
         
+        {/* Fullscreen Button */}
+        <button 
+          onClick={() => {
+            if (!document.fullscreenElement) {
+              document.documentElement.requestFullscreen().catch(e => {
+                console.error(`Error attempting to enable full-screen mode: ${e.message} (${e.name})`);
+              });
+            } else {
+              if (document.exitFullscreen) {
+                document.exitFullscreen();
+              }
+            }
+          }}
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-bold text-xs transition-all shadow-lg active:scale-95 mr-2"
+          title="Alternar Tela Cheia"
+        >
+          <Maximize2 size={14} />
+          TELA CHEIA
+        </button>
+
         {/* Exit Simulator Button */}
         <button 
           onClick={abortSimulator}
@@ -2161,6 +2198,52 @@ export default function App() {
                 </button>
               </div>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Fullscreen Exit Confirmation Dialog */}
+      <AnimatePresence>
+        {showFullscreenExitDialog && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-white rounded-[2.5rem] p-10 max-w-md w-full shadow-[0_32px_64px_-16px_rgba(0,0,0,0.4)] border border-white/20"
+            >
+              <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mb-8 mx-auto shadow-inner">
+                <Maximize2 size={40} />
+              </div>
+              <h3 className="text-3xl font-black text-gray-900 text-center mb-4 tracking-tight">Sair da Tela Cheia?</h3>
+              <p className="text-gray-500 font-medium text-center mb-10 text-lg leading-relaxed">
+                Você está saindo do modo focado. Quer retornar para a janela normal do navegador?
+              </p>
+              <div className="flex flex-col gap-4">
+                <button 
+                  onClick={() => {
+                    if (document.exitFullscreen) {
+                      document.exitFullscreen().catch(() => {});
+                    }
+                    setShowFullscreenExitDialog(false);
+                  }}
+                  className="w-full bg-red-500 hover:bg-red-600 text-white py-5 rounded-2xl font-black text-lg shadow-xl shadow-red-200 active:scale-95 transition-all text-center"
+                >
+                  SIM, SAIR DA TELA CHEIA
+                </button>
+                <button 
+                  onClick={() => setShowFullscreenExitDialog(false)}
+                  className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-5 rounded-2xl font-black text-lg active:scale-95 transition-all text-center"
+                >
+                  NÃO, CONTINUAR NO SIMULADOR
+                </button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
