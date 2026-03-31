@@ -433,20 +433,18 @@ export default function App() {
     if (trashRef.current) {
       const trashRect = trashRef.current.getBoundingClientRect();
       if (x >= trashRect.left && x <= trashRect.right && y >= trashRect.top && y <= trashRect.bottom) {
-        setItems(prev => {
-          const item = prev.find(i => i.id === id);
-          if (item) {
-            setDeletedItems(d => [...d, item]);
-            if (currentLesson?.goal === 'delete_item' || (currentLesson?.goal === 'avoid_virus' && item.type === 'virus')) {
-              const points = 100;
-              setLastPoints(points);
-              setTotalScore(s => s + points);
-              setLessonSuccess(true);
-            }
-            return prev.filter(i => i.id !== id);
+        const itemToDelete = items.find(i => i.id === id);
+        if (itemToDelete) {
+          setDeletedItems(prev => [...prev, itemToDelete]);
+          setItems(prev => prev.filter(i => i.id !== id));
+          
+          if (currentLesson?.goal === 'delete_item' || (currentLesson?.goal === 'avoid_virus' && itemToDelete.type === 'virus')) {
+            const points = 100;
+            setLastPoints(points);
+            setTotalScore(s => s + points);
+            setLessonSuccess(true);
           }
-          return prev;
-        });
+        }
         return;
       }
     }
@@ -550,14 +548,11 @@ export default function App() {
   };
 
   const deleteItem = (id: string) => {
-    setItems(prev => {
-      const item = prev.find(i => i.id === id);
-      if (item) {
-        setDeletedItems(d => [...d, { ...item, x: item.x + 20, y: item.y + 20 }]);
-        return prev.filter(i => i.id !== id);
-      }
-      return prev;
-    });
+    const itemToDelete = items.find(i => i.id === id);
+    if (itemToDelete) {
+      setDeletedItems(prev => [...prev, { ...itemToDelete, x: itemToDelete.x + 20, y: itemToDelete.y + 20 }]);
+      setItems(prev => prev.filter(i => i.id !== id));
+    }
     setContextMenu(null);
   };
 
@@ -584,11 +579,14 @@ export default function App() {
   };
 
   const restoreItem = (id: string) => {
-    const item = deletedItems.find(i => i.id === id);
-    if (item) {
-      setItems([...items, item]);
-      setDeletedItems(deletedItems.filter(i => i.id !== id));
-    }
+    setDeletedItems(prevDeleted => {
+      const itemToRestore = prevDeleted.find(i => i.id === id);
+      if (itemToRestore) {
+        setItems(prevItems => [...prevItems, itemToRestore]);
+        return prevDeleted.filter(i => i.id !== id);
+      }
+      return prevDeleted;
+    });
   };
 
   const handleItemClick = (item: DesktopItem) => {
@@ -1384,7 +1382,16 @@ export default function App() {
                   <div className="flex items-center gap-1 cursor-pointer hover:text-blue-600"><LayoutGrid size={14} /> Visualizar</div>
                 </div>
                 <div 
-                  className="flex-1 p-8 grid grid-cols-6 gap-8 content-start"
+                  className="flex-1 p-8 grid grid-cols-6 gap-8 content-start outline-none"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'F2' && selectedIconId && !editingId) {
+                      setEditingId(selectedIconId);
+                    }
+                  }}
+                  onClick={() => {
+                    setSelectedIconId(null);
+                  }}
                   onContextMenu={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -1403,15 +1410,46 @@ export default function App() {
                     <div 
                       key={item.id} 
                       onDoubleClick={() => handleItemClick(item)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedIconId(item.id);
+                      }}
                       onContextMenu={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
+                        setSelectedIconId(item.id);
                         setContextMenu({ visible: true, x: e.clientX, y: e.clientY, targetId: item.id, type: 'item' });
                       }}
-                      className={`flex flex-col items-center gap-2 group cursor-pointer hover:bg-blue-50 p-2 rounded-lg transition-colors ${contextMenu?.targetId === item.id ? 'bg-blue-100' : ''}`}
+                      className={`flex flex-col items-center gap-2 group cursor-pointer p-2 rounded-[1rem] transition-all ${selectedIconId === item.id || contextMenu?.targetId === item.id ? 'bg-blue-100/50 shadow-inner' : 'hover:bg-blue-50/50'}`}
                     >
-                      {renderIcon(item.type, 48, item)}
-                      <span className="text-xs text-center text-gray-700 break-words w-full">{item.name}</span>
+                      <div className="p-2 transition-transform group-hover:scale-110">
+                        {renderIcon(item.type, 48, item)}
+                      </div>
+                      {editingId === item.id ? (
+                        <input 
+                          autoFocus
+                          className="text-[10px] text-center bg-white text-black w-full outline-none border border-blue-400 p-0.5 rounded shadow-sm"
+                          defaultValue={item.name}
+                          onBlur={(e) => {
+                            const newName = e.target.value;
+                            setItems(items.map(i => i.id === item.id ? { ...i, name: newName } : i));
+                            setEditingId(null);
+                          }}
+                          onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                        />
+                      ) : (
+                        <span 
+                          className={`text-xs text-center break-words w-full px-1 rounded transition-colors ${selectedIconId === item.id ? 'bg-blue-600 text-white' : 'text-gray-700'}`}
+                          onClick={(e) => {
+                            if (selectedIconId === item.id) {
+                              e.stopPropagation();
+                              setEditingId(item.id);
+                            }
+                          }}
+                        >
+                          {item.name}
+                        </span>
+                      )}
                     </div>
                   ))}
                   {items.filter(i => i.parentId === win.folderId).length === 0 && (
