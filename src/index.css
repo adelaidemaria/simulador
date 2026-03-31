@@ -58,6 +58,6 @@
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
   }
-  .animate-bounce-subtle { animation: bounce-subtle 2s infinite; }
-  .animate-pulse-slow { animation: pulse-slow 3s infinite; }
+  --animate-bounce-subtle: bounce-subtle 2s infinite;
+  --animate-pulse-slow: pulse-slow 3s infinite;
 }
