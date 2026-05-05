@@ -740,7 +740,7 @@ export default function App() {
           </div>
           <h2 className="text-3xl md:text-5xl font-black tracking-tight mb-4">Informática Sem Segredo</h2>
           <p className="text-lg md:text-xl text-gray-500 mb-8 font-medium">
-            Aprenda a usar o computador com calma e segurança. O simulador será aberto em <span className="text-blue-600 font-bold">Tela Cheia</span> para evitar distrações.
+            Ambiente de Treinamento: <span className="text-red-600">Domine o uso do computador SEM MEDO</span>. O simulador será aberto em <span className="text-blue-600 font-bold">Tela Cheia</span> para evitar distrações.
           </p>
           <button 
             onClick={startSimulator}
@@ -1908,7 +1908,7 @@ export default function App() {
                   </div>
                   <h2 className="text-5xl font-black mb-6 leading-[0.9] tracking-tighter">Informática Sem Segredo</h2>
                   <p className="text-blue-100 text-xl font-medium leading-relaxed opacity-80">
-                    Aprenda a usar o computador com calma e segurança. Escolha um desafio ao lado.
+                    Ambiente de Treinamento: <span className="text-red-400">Domine o uso do computador SEM MEDO</span>. Escolha um desafio ao lado.
                   </p>
                 </div>
                 
